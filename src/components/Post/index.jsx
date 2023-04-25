@@ -1,33 +1,44 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { createPost, deletePost, getPosts, updatePost } from "../../api/Post";
 import { useHistory } from 'react-router-dom';
 import EditPost from "./edit";
 import { Loader } from "../Loader";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useQuery, useMutation, useQueryClient } from "react-query";
 
 const Post = () => {
 
-  const [posts, setPosts] = useState([]);
+  // const [posts, setPosts] = useState([]);
   const [editId, setEditId] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient()
 
-  const fetchPosts = async () => {
-    try {
-      setIsLoading(true);
-      const posts = await getPosts();
-      setPosts(posts);
-    } catch (error) {
-      console.log("Error in fetching post ", error)
-    } finally {
-      setIsLoading(false);
-    }
-  }
 
-  useEffect(() => {
-    fetchPosts();
-  }, [])
+  const {isLoading, data: posts } = useQuery(["posts"], getPosts);
+
+  const mutationDelete = useMutation(deletePost, {
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries(["posts"])
+    },
+  })
+
+  const mutationUpdate = useMutation(updatePost, {
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries(["posts"])
+    },
+  });
+
+  const mutationCreate = useMutation(createPost, {
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries(["posts"])
+    },
+  })
+
 
   const history = useHistory();
 
@@ -39,64 +50,45 @@ const Post = () => {
     setIsCreating(false);
     setEditId(null);
   }
+  
+  const showToastMsg = (title) => {
+    toast.success(`🦄 ${title}`, {
+      position: "bottom-center",
+      autoClose: 1500,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "light",
+      });
+  }
 
   const onDelete =  async (id) => {
     try {
-      setIsLoading(true);
-      await deletePost(id);
-      toast.success('🦄 Deleted!', {
-        position: "bottom-center",
-        autoClose: 1500,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "light",
-        });
-        fetchPosts();
+      mutationDelete.mutate(id)
+      showToastMsg("Deleted!")
     } catch (error) {
       console.log("Error on Delete: ", error);
     } finally {
-      setIsLoading(false);
     }
   };
 
   const onUpdate = async (id, post) => {
     try {
-      setIsLoading(true);
+      debugger
       if (id) {
-        await updatePost({id, ...post});
+        mutationUpdate.mutate({id, ...post})
         onClose();
-        await fetchPosts();
-        toast.success('🦄 Updated!', {
-          position: "bottom-center",
-          autoClose: 1500,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "light",
-          });
+        showToastMsg("updated!")
       } else {
-        await createPost(post);
+        mutationCreate.mutate(post);
         onClose();
-        await fetchPosts();
-        toast.success('🦄 Created!', {
-          position: "bottom-center",
-          autoClose: 1500,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "light",
-          });
+        showToastMsg('🦄 Created!');
       }
     } catch (error) {
       console.log("Error updating post: ", error);
-      toast.success('Unable to update!', {
+      toast.error('Unable to update!', {
         position: "bottom-center",
         autoClose: 1500,
         hideProgressBar: false,
@@ -107,11 +99,8 @@ const Post = () => {
         theme: "light",
         });
     } finally {
-      setIsLoading(false)
     }
   }
-
-  
 
   return (
     <div className="container p-4">
@@ -128,7 +117,7 @@ const Post = () => {
         {editId && <EditPost  id={editId} onClose={onClose} onUpdate={onUpdate}/>}
         {isCreating && <EditPost onClose={onClose} onUpdate={onUpdate}/>}
         {isLoading ? (<Loader />): (
-          posts.map(post => (
+          posts && posts.map(post => (
             <div key={post._id} className="relative shadow-lg bg-slate-600 h-[150px] my-4 rounded-md flex flex-col justify-start border-2">
               <div className="text-2xl font-bold text-center py-2 text-white">{post.title}</div>
               <div className="text-md opacity-80 px-4 py-1 text-white">{post.description}</div>
