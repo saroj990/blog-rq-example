@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createPost, getPost, updatePost } from "../../api/Post";
+import { getPost } from "../../api/Post";
 import { useEffect } from "react";
 import { useHistory } from "react-router-dom";
 import { useQuery } from "react-query";
@@ -45,6 +45,13 @@ const EditPost = ({ id, onClose, onUpdate }) => {
     }
   }
 
+  if (isLoading) {
+    return (
+      <div>
+        Loading post..
+      </div>
+    )
+  }
 
   return (
     <div className="container bg-slate-500 text-black px-4 py-2 border-2 border-slate-200 rounded-md">
